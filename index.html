@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>نوت‌بوک</title>
+    <link rel="manifest" href="manifest.json">
+     
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232563eb'><path d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z'/></svg>">
+    
+    <style>
+        /* --- متغیرهای تم --- */
+        :root {
+            --bg-body: #f0f2f5;
+            --bg-card: #ffffff;
+            --text-main: #1f2937;
+            --text-note: #111827; 
+            --text-muted: #6b7280;
+            --primary: #2563eb;
+            --border: #e5e7eb;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --radius: 12px;
+            --dark-overlay: rgba(0,0,0,0);
+        }
+
+        [data-theme="dark"] {
+            --bg-body: #111827;
+            --bg-card: #1f2937;
+            --text-main: #f3f4f6;
+            --text-note: #1f2937;
+            --text-muted: #9ca3af;
+            --primary: #3b82f6;
+            --border: #374151;
+            --shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            --dark-overlay: rgba(0,0,0,0.25);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Tahoma', 'Segoe UI', sans-serif; background-color: var(--bg-body); color: var(--text-main); padding: 15px; transition: background 0.3s; padding-bottom: 80px; }
+        
+        .container { max-width: 900px; margin: 0 auto; }
+        button { cursor: pointer; font-family: inherit; border: none; }
+        
+        /* --- هدر --- */
+        header { background: var(--bg-card); padding: 15px 20px; border-radius: var(--radius); box-shadow: var(--shadow); display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+        .logo h1 { font-size: 18px; font-weight: bold; }
+        .header-controls { display: flex; gap: 8px; }
+        .icon-btn { width: 36px; height: 36px; border-radius: 8px; background: var(--bg-body); color: var(--text-main); display: flex; align-items: center; justify-content: center; font-size: 16px; transition: 0.2s; position: relative; }
+        .icon-btn:hover { background: var(--border); }
+        /* نشانگر سینک */
+
+        .icon-btn.sync-spin svg { transition: transform 0.3s; }
+        .icon-btn.sync-spin svg.active { animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        /* --- فرم --- */
+        .editor-panel { background: var(--bg-card); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 25px; border: 1px solid var(--border); }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+        .full-width { grid-column: span 2; }
+        .input-group label { display: block; font-size: 11px; margin-bottom: 5px; color: var(--text-muted); }
+        .input-field { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-body); color: var(--text-main); font-size: 13px; }
+        .input-field:focus { border-color: var(--primary); }
+        
+        .options-row { display: flex; justify-content: space-between; align-items: center; background: var(--bg-body); padding: 10px; border-radius: 8px; margin-bottom: 15px; }
+        .color-circles { display: flex; gap: 8px; }
+        .c-opt { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+        .c-opt.active { border-color: var(--text-main); transform: scale(1.1); }
+        .priority-slider { display: flex; align-items: center; gap: 10px; flex: 1; margin-right: 20px; }
+        .priority-slider input { flex: 1; accent-color: #ef4444; cursor: pointer; }
+        .p-label { font-size: 11px; font-weight: bold; width: 60px; text-align: left; }
+
+        .submit-btn { width: 100%; padding: 12px; border-radius: 8px; background: var(--primary); color: white; font-weight: bold; font-size: 14px; transition: 0.2s; }
+        .submit-btn:hover { opacity: 0.9; }
+        .cancel-btn { background: var(--text-muted); margin-top: 10px; display: none; }
+
+        /* --- کارت‌ها --- */
+        .notes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
+        .note-card { 
+            background-color: var(--bg-card); 
+            border-radius: var(--radius); 
+            padding: 15px; 
+            position: relative; 
+            box-shadow: var(--shadow); 
+            border-right: 4px solid #ccc; 
+            display: flex; 
+            flex-direction: column; 
+            min-height: 180px; 
+            transition: transform 0.2s;
+            color: var(--text-note);
+        }
+        .note-card:hover { transform: translateY(-3px); }
+        /* فیلتر رنگ در دارک مود */
+        [data-theme="dark"] .note-card:not([data-color="#ffffff"]) { filter: brightness(0.85); }
+
+        .card-top { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: start; }
+        .card-date { font-size: 15px; background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; color: var(--text-note); }
+        .card-title { font-weight: bold; font-size: 15px; margin-bottom: 8px; }
+        .card-desc { font-size: 12px; line-height: 1.6; flex-grow: 1; margin-bottom: 15px; white-space: pre-wrap; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; }
+        .card-actions { border-top: 1px solid rgba(0,0,0,0.1); padding-top: 10px; display: flex; gap: 10px; justify-content: flex-end; }
+        .action-btn { font-size: 11px; padding: 6px 12px; border-radius: 6px; background: var(--bg-body); color: var(--text-main); }
+        .btn-done { color: #10b981; }
+        .btn-edit { color: #2563eb; }
+        .btn-del { color: #ef4444; }
+        .completed .card-title { text-decoration: line-through; opacity: 0.6; }
+        .completed { opacity: 0.9; }
+
+        /* --- مودال‌ها --- */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); z-index: 100; display: none; justify-content: center; align-items: center; }
+        .modal-box { background: var(--bg-card); padding: 20px; border-radius: var(--radius); width: 90%; max-width: 350px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); animation: popIn 0.2s; }
+        .date-selectors { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin: 15px 0; }
+        .date-selectors select { padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-body); color: var(--text-main); width: 100%; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 15px; }
+        .modal-btn { flex: 1; padding: 10px; border-radius: 6px; font-weight: bold; }
+
+        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } .full-width { grid-column: auto; } .options-row { flex-direction: column; align-items: stretch; gap: 10px; } .priority-slider { margin-right: 0; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="logo">
+            <h1>📒 نوت‌بوک</h1>
+        </div>
+        <div class="header-controls">
+            
+            <button class="icon-btn sync-spin" onclick="syncCloud()" title="همگام‌سازی">
+                <svg id="syncIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M3 22v-6h6"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path></svg>
+            </button>
+            <button class="icon-btn" onclick="toggleTheme()" title="تم شب/روز">🌙</button>
+            <button class="icon-btn" onclick="openSettings()" title="تنظیمات سرور">⚙️</button>
+            <button class="icon-btn" onclick="openBackupModal()" title="پشتیبان فایل">💾</button>
+        </div>
+    </header>
+
+    <section class="editor-panel" id="editorPanel">
+        
+        <input type="hidden" id="jDateValue">
+        <input type="hidden" id="noteId">
+
+        <div class="form-grid">
+            <div class="input-group full-width">
+                <label>عنوان</label>
+                <input type="text" id="inpTitle" class="input-field" placeholder="عنوان کار را وارد کنید...">
+            </div>
+            <div class="input-group full-width">
+                <label>توضیحات</label>
+                <textarea id="inpDesc" class="input-field" rows="3" placeholder="جزئیات..."></textarea>
+            </div>
+            <div class="input-group">
+                <label>تاریخ سررسید</label>
+                <input type="text" id="inpDate" class="input-field" placeholder="انتخاب تاریخ..." onclick="openDatePicker()" readonly style="cursor: pointer; background: var(--bg-card);">
+            </div>
+            
+            <div class="options-row full-width">
+                <div class="color-circles" id="colorPicker"></div>
+                <div class="priority-slider">
+                    <input type="range" id="inpPrio" min="1" max="5" value="1" oninput="updatePrioLabel()">
+                    <div class="p-label" id="prioLabel">حیاتی</div>
+                </div>
+            </div>
+        </div>
+        
+        <button class="submit-btn" id="btnSave" onclick="saveNote()">ثبت یادداشت</button>
+        <button class="submit-btn cancel-btn" id="btnCancel" onclick="resetForm()">انصراف از ویرایش</button>
+    </section>
+
+    <div class="tabs" style="display:flex; gap:10px; margin-bottom:20px; overflow-x:auto;">
+        <div class="tab active" style="padding:6px 12px; border-radius:15px; background:var(--primary); color:white; font-size:12px;" onclick="filterNotes('all', this)">همه</div>
+        <div class="tab" style="padding:6px 12px; border-radius:15px; background:var(--bg-card); color:var(--text-muted); font-size:12px;" onclick="filterNotes('active', this)">فعال</div>
+        <div class="tab" style="padding:6px 12px; border-radius:15px; background:var(--bg-card); color:var(--text-muted); font-size:12px;" onclick="filterNotes('archived', this)">آرشیو</div>
+    </div>
+
+    <div id="notesList" class="notes-grid"></div>
+</div>
+
+
+<div class="modal-overlay" id="dateModal">
+    <div class="modal-box">
+        <h3 style="margin-bottom: 10px;">انتخاب تاریخ</h3>
+        <div class="date-selectors">
+            <select id="selDay"></select>
+            <select id="selMonth"></select>
+            <select id="selYear"></select>
+        </div>
+        <div class="modal-actions">
+            <button class="modal-btn" style="background:var(--text-muted); color:white" onclick="closeDateModal()">لغو</button>
+            <button class="modal-btn" style="background:var(--primary); color:white" onclick="confirmDate()">تایید</button>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal-overlay" id="settingsModal">
+    <div class="modal-box">
+        <h3 style="margin-bottom: 10px;">تنظیمات ابری (JSONBin)</h3>
+        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">
+            برای همگام‌سازی بین دستگاه‌ها، یک حساب رایگان در jsonbin.io بسازید و کلیدها را وارد کنید.
+        </p>
+        <div style="margin-bottom:10px;">
+            <label style="font-size:11px;">Bin ID:</label>
+            <input type="text" id="setBinId" class="input-field" placeholder="مثال: 645a...">
+        </div>
+        <div style="margin-bottom:10px;">
+            <label style="font-size:11px;">API Key ($2a$10$...):</label>
+            <input type="password" id="setApiKey" class="input-field" placeholder="کلید دسترسی شما">
+        </div>
+        <div class="modal-actions">
+            <button class="modal-btn" style="background:var(--border); color:var(--text-main);" onclick="closeSettings()">بستن</button>
+            <button class="modal-btn" style="background:var(--success); color:white;" onclick="saveSettings()">ذخیره</button>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal-overlay" id="backupModal">
+    <div class="modal-box">
+        <h3>مدیریت فایل</h3>
+        <div class="modal-actions" style="flex-direction: column;">
+            <button class="modal-btn" style="background: #10b981; color: white;" onclick="downloadBackup()">📥 دانلود فایل</button>
+            <button class="modal-btn" style="background: var(--primary); color: white;" onclick="document.getElementById('fileRestore').click()">📤 بازگردانی فایل</button>
+            <input type="file" id="fileRestore" style="display:none" onchange="restoreBackup(this)">
+            <button class="modal-btn" style="background: var(--bg-body); color: var(--text-main);" onclick="document.getElementById('backupModal').style.display='none'">بستن</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- تنظیمات اولیه ---
+    const MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
+    const COLORS = ['#ffffff', '#fef08a', '#bbf7d0', '#bfdbfe', '#e9d5ff', '#fecaca'];
+    const PRIO_COLORS = {1: '#ef4444', 2: '#f97316', 3: '#eab308', 4: '#3b82f6', 5: '#9ca3af'};
+    const PRIO_TEXTS = {1: 'حیاتی', 2: 'مهم', 3: 'معمولی', 4: 'کم', 5: 'جزئی'};
+
+    let notes = JSON.parse(localStorage.getItem('pro_notes_final_v4')) || [];
+    let syncConfig = JSON.parse(localStorage.getItem('pro_notes_sync_config')) || { binId: '', apiKey: '' };
+    let filterType = 'all';
+
+    window.onload = function() {
+        initColorPicker();
+        initDateSelectors(); // این متد باید تاریخ امروز را ست کند
+        render();
+        applyTheme();
+        
+        // بارگذاری تنظیمات
+        document.getElementById('setBinId').value = syncConfig.binId;
+        document.getElementById('setApiKey').value = syncConfig.apiKey;
+    };
+
+    // --- مدیریت تم ---
+    function toggleTheme() {
+        const body = document.body;
+        if (body.getAttribute('data-theme') === 'dark') {
+            body.removeAttribute('data-theme');
+            localStorage.setItem('theme', 'light');
+        } else {
+            body.setAttribute('data-theme', 'dark');
+            localStorage.setItem('theme', 'dark');
+        }
+        render();
+    }
+    function applyTheme() {
+        const t = localStorage.getItem('theme');
+        if (t === 'dark') document.body.setAttribute('data-theme', 'dark');
+    }
+
+    // --- تقویم و تاریخ ---
+    function getTodayJalali() {
+        const now = new Date();
+        const jDate = now.toLocaleDateString('fa-IR').split('/'); // [year, month, day]
+        return { y: parseInt(jDate[0]), m: parseInt(jDate[1]), d: parseInt(jDate[2]) };
+    }
+
+    function initDateSelectors() {
+        const y = document.getElementById('selYear');
+        const m = document.getElementById('selMonth');
+        const d = document.getElementById('selDay');
+        
+        // پر کردن سال‌ها
+        for (let i = 1400; i <= 1415; i++) y.add(new Option(toPersianNums(i), i));
+        
+        // پر کردن ماه‌ها
+        MONTHS.forEach((mon, i) => m.add(new Option(mon, i + 1)));
+        
+        // پر کردن روزها (ابتدا 31 تا)
+        updateDays(31);
+
+        // تنظیم روی تاریخ امروز (سیستم کاربر)
+        const today = getTodayJalali();
+        y.value = today.y;
+        m.value = today.m;
+        
+        // اصلاح تعداد روزها بر اساس ماه انتخاب شده
+        updateDaysLimit();
+        
+        // ست کردن روز امروز
+        d.value = today.d;
+
+        // رویدادها
+        y.onchange = updateDaysLimit;
+        m.onchange = updateDaysLimit;
+    }
+
+    function updateDays(num) {
+        const d = document.getElementById('selDay');
+        d.innerHTML = '';
+        for (let i = 1; i <= num; i++) d.add(new Option(toPersianNums(i), i));
+    }
+
+    function updateDaysLimit() {
+        const m = parseInt(document.getElementById('selMonth').value);
+        const days31 = [1, 2, 3, 4, 5, 6];
+        const count = days31.includes(m) ? 31 : (m === 12 ? 29 : 30);
+        updateDays(count);
+    }
+
+    function openDatePicker() {
+        document.getElementById('dateModal').style.display = 'flex';
+    }
+    
+    function closeDateModal() { document.getElementById('dateModal').style.display = 'none'; }
+    
+    function confirmDate() {
+        const y = document.getElementById('selYear').value;
+        const m = document.getElementById('selMonth').value;
+        const d = document.getElementById('selDay').value;
+        const str = `${y}/${m}/${d}`;
+        
+        // اطمینان از وجود المنت‌ها برای جلوگیری از خطای null
+        const inpDate = document.getElementById('inpDate');
+        const jDateValue = document.getElementById('jDateValue');
+
+        if(inpDate) inpDate.value = toPersianNums(str);
+        if(jDateValue) jDateValue.value = str;
+
+        closeDateModal();
+    }
+
+    // --- ابزارها ---
+    function toPersianNums(n) {
+        return n.toString().replace(/\d/g, x => '۰۱۲۳۴۵۶۷۸۹'[x]);
+    }
+    function initColorPicker() {
+        const container = document.getElementById('colorPicker');
+        container.innerHTML = '';
+        COLORS.forEach((c, i) => {
+            const div = document.createElement('div');
+            div.className = `c-opt ${i===0?'active':''}`;
+            div.style.backgroundColor = c;
+            div.onclick = () => {
+                document.querySelectorAll('.c-opt').forEach(el => el.classList.remove('active'));
+                div.classList.add('active');
+            };
+            container.appendChild(div);
+        });
+    }
+    function updatePrioLabel() {
+        const val = document.getElementById('inpPrio').value;
+        document.getElementById('prioLabel').innerText = PRIO_TEXTS[val];
+        document.getElementById('prioLabel').style.color = PRIO_COLORS[val];
+    }
+
+    // --- CRUD ---
+    function saveNote() {
+        const id = document.getElementById('noteId').value;
+        const title = document.getElementById('inpTitle').value.trim();
+        const desc = document.getElementById('inpDesc').value.trim();
+        const dateStr = document.getElementById('jDateValue').value; // خواندن از اینپوت مخفی
+        const prio = document.getElementById('inpPrio').value;
+        const activeColorEl = document.querySelector('.c-opt.active');
+        const color = activeColorEl ? activeColorEl.style.backgroundColor : '#ffffff';
+        const now = Date.now();
+
+        if (!title || !dateStr) { showToast('عنوان و تاریخ الزامی است', 'error'); return; }
+
+        if (id) {
+            // ویرایش
+            const index = notes.findIndex(n => n.id == id);
+            if (index > -1) {
+                notes[index] = { ...notes[index], title, desc, date: dateStr, priority: prio, color, updatedAt: now };
+                showToast('ویرایش انجام شد');
+            }
+        } else {
+            // جدید
+            const note = {
+                id: Date.now(),
+                title, desc, date: dateStr, priority: prio, color,
+                completed: false,
+                createdAt: now,
+                updatedAt: now
+            };
+            notes.unshift(note);
+            showToast('ذخیره شد');
+        }
+        saveLocal();
+        resetForm();
+        render();
+    }
+
+    function editNote(id) {
+        const note = notes.find(n => n.id == id);
+        if (!note) return;
+        document.getElementById('noteId').value = note.id;
+        document.getElementById('inpTitle').value = note.title;
+        document.getElementById('inpDesc').value = note.desc;
+        document.getElementById('inpDate').value = toPersianNums(note.date);
+        document.getElementById('jDateValue').value = note.date;
+        document.getElementById('inpPrio').value = note.priority;
+        updatePrioLabel();
+        
+        // رنگ
+        document.querySelectorAll('.c-opt').forEach(el => {
+            el.classList.remove('active');
+            if (rgbToHex(el.style.backgroundColor) === note.color || el.style.backgroundColor === note.color) el.classList.add('active');
+        });
+
+        document.getElementById('btnSave').innerText = 'بروزرسانی';
+        document.getElementById('btnCancel').style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetForm() {
+        document.getElementById('noteId').value = '';
+        document.getElementById('inpTitle').value = '';
+        document.getElementById('inpDesc').value = '';
+        document.getElementById('inpDate').value = '';
+        document.getElementById('jDateValue').value = '';
+        document.getElementById('inpPrio').value = 1;
+        updatePrioLabel();
+        document.querySelectorAll('.c-opt').forEach((el, i) => {
+            el.classList.remove('active');
+            if(i===0) el.classList.add('active');
+        });
+        document.getElementById('btnSave').innerText = 'ثبت یادداشت';
+        document.getElementById('btnCancel').style.display = 'none';
+    }
+
+    function toggleComplete(id) {
+        const note = notes.find(n => n.id == id);
+        if (note) { note.completed = !note.completed; note.updatedAt = Date.now(); saveLocal(); render(); }
+    }
+
+    function deleteNote(id) {
+        if(confirm('حذف شود؟')) {
+            notes = notes.filter(n => n.id != id);
+            saveLocal();
+            render();
+        }
+    }
+
+    function filterNotes(type, btn) {
+        filterType = type;
+        document.querySelectorAll('.tab').forEach(t => {
+            t.style.background = 'var(--bg-card)';
+            t.style.color = 'var(--text-muted)';
+        });
+        btn.style.background = 'var(--primary)';
+        btn.style.color = 'white';
+        render();
+    }
+
+    function render() {
+        const list = document.getElementById('notesList');
+        list.innerHTML = '';
+        
+        let filtered = notes.filter(n => {
+            if (filterType === 'all') return true;
+            if (filterType === 'active') return !n.completed;
+            if (filterType === 'archived') return n.completed;
+        });
+
+        filtered.sort((a, b) => {
+            if (a.completed !== b.completed) return a.completed ? 1 : -1;
+            if (a.priority !== b.priority) return a.priority - b.priority;
+            return b.updatedAt - a.updatedAt;
+        });
+
+        if (filtered.length === 0) {
+            list.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--text-muted)">خالی است.</div>';
+            return;
+        }
+
+        filtered.forEach(n => {
+            const el = document.createElement('div');
+            el.className = `note-card ${n.completed ? 'completed' : ''}`;
+            el.style.borderRightColor = PRIO_COLORS[n.priority];
+            el.style.backgroundColor = n.color;
+            el.setAttribute('data-color', n.color);
+
+            el.innerHTML = `
+                <div class="card-top">
+                    <span class="card-date">${toPersianNums(n.date)}</span>
+                </div>
+                <div class="card-title">${n.title}</div>
+                <div class="card-desc">${n.desc || 'بدون توضیحات'}</div>
+                <div class="card-actions">
+                    <button class="action-btn btn-done" onclick="toggleComplete(${n.id})">${n.completed ? 'بازگردانی' : 'انجام شد'}</button>
+                    <button class="action-btn btn-edit" onclick="editNote(${n.id})">ویرایش</button>
+                    <button class="action-btn btn-del" onclick="deleteNote(${n.id})">حذف</button>
+                </div>
+            `;
+            list.appendChild(el);
+        });
+    }
+
+    function saveLocal() { localStorage.setItem('pro_notes_final_v4', JSON.stringify(notes)); }
+
+    // --- Sync Logic ---
+    function openSettings() { document.getElementById('settingsModal').style.display = 'flex'; }
+    function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
+    function saveSettings() {
+        syncConfig.binId = document.getElementById('setBinId').value.trim();
+        syncConfig.apiKey = document.getElementById('setApiKey').value.trim();
+        localStorage.setItem('pro_notes_sync_config', JSON.stringify(syncConfig));
+        closeSettings();
+        showToast('تنظیمات ذخیره شد', 'success');
+    }
+
+    async function syncCloud() {
+        if (!syncConfig.binId || !syncConfig.apiKey) {
+            openSettings();
+            return;
+        }
+
+        const icon = document.getElementById('syncIcon');
+        icon.classList.add('active');
+
+        try {
+            const res = await fetch(`https://api.jsonbin.io/v3/b/${syncConfig.binId}/latest`, {
+                headers: { 'X-Master-Key': syncConfig.apiKey }
+            });
+            if (!res.ok) throw new Error('خطا در ارتباط');
+            const data = await res.json();
+            const remoteNotes = data.record || [];
+
+            const remoteMap = new Map(remoteNotes.map(n => [n.id, n]));
+            let merged = [...notes];
+
+            notes.forEach(local => {
+                const remote = remoteMap.get(local.id);
+                if (remote) {
+                    if (remote.updatedAt > local.updatedAt) {
+                        const idx = merged.findIndex(m => m.id === local.id);
+                        merged[idx] = remote;
+                    }
+                    remoteMap.delete(local.id);
+                }
+            });
+
+            remoteMap.forEach(rem => merged.push(rem));
+
+            notes = merged;
+            saveLocal();
+            render();
+
+            await fetch(`https://api.jsonbin.io/v3/b/${syncConfig.binId}`, {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Master-Key': syncConfig.apiKey
+                },
+                body: JSON.stringify(notes)
+            });
+
+            showToast('همگام‌سازی موفق', 'success');
+        } catch (e) {
+            console.error(e);
+            showToast('خطا در همگام‌سازی', 'error');
+        } finally {
+            setTimeout(() => icon.classList.remove('active'), 2000);
+        }
+    }
+
+    // --- بک‌آپ دستی ---
+    function downloadBackup() {
+        const str = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(notes));
+        const a = document.createElement('a');
+        a.href = str;
+        a.download = "backup_notes.json";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    }
+    function restoreBackup(inp) {
+        const file = inp.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            try {
+                notes = JSON.parse(e.target.result);
+                saveLocal();
+                render();
+                document.getElementById('backupModal').style.display = 'none';
+                showToast('بازیابی شد');
+            } catch(err) { alert('فایل نامعتبر'); }
+        };
+        reader.readAsText(file);
+    }
+    function openBackupModal() { document.getElementById('backupModal').style.display = 'flex'; }
+
+    function showToast(msg, type = 'info') {
+        const t = document.createElement('div');
+        const bg = type === 'error' ? '#ef4444' : (type === 'success' ? '#10b981' : 'rgba(0,0,0,0.8)');
+        t.style.cssText = `position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:${bg}; color:white; padding:10px 20px; border-radius:20px; z-index:999; font-size:12px;`;
+        t.innerText = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 2500);
+    }
+
+    function rgbToHex(rgb) {
+        if(!rgb) return '';
+        if(rgb.startsWith('#')) return rgb;
+        let sep = rgb.indexOf(",") > -1 ? "," : " ";
+        rgb = rgb.substr(4).split(")")[0].split(sep);
+        let r = (+rgb[0]).toString(16), g = (+rgb[1]).toString(16), b = (+rgb[2]).toString(16);
+        if (r.length == 1) r = "0" + r;
+        if (g.length == 1) g = "0" + g;
+        if (b.length == 1) b = "0" + b;
+        return "#" + r + g + b;
+    }
+        if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('Service Worker: Registered'))
+                .catch(err => console.log('Service Worker: Error: ' + err));
+        });
+    }
+
+</script>
+</body>
+</html>
